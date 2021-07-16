@@ -2,128 +2,118 @@ Changes by Version
 ==================
 Release Notes.
 
-8.4.0
+8.7.0
 ------------------
+
 #### Project
-* Incompatible with previous releases when use H2/MySQL/TiDB storage options, due to support multiple alarm rules triggered for one entity.
-* Chore: adapt `create_source_release.sh` to make it runnable on Linux.
-* Add `package` to `.proto` files, prevent polluting top-level namespace in some languages; The OAP server supports previous agent releases, whereas the previous OAP server (<=8.3.0) won't recognize newer agents since this version (>= 8.4.0).
-* Add ElasticSearch 7.10 to test matrix and verify it works.
-* Replace Apache RAT with skywalking-eyes to check license headers.
-* Set up test of Envoy ALS / MetricsService under Istio 1.8.2 to verify Envoy V3 protocol
+
+* Extract dependency management to a bom.
+* Add JDK 16 to test matrix.
+* DataCarrier consumer add a new event notification, call `nothingToConsume` method if the queue has no element to
+  consume.
 
 #### Java Agent
-* The operation name of quartz-scheduler plugin, has been changed as the `quartz-scheduler/${className}` format.
-* Fix jdk-http and okhttp-3.x plugin did not overwrite the old trace header.
-* Add interceptors of method(analyze, searchScroll, clearScroll, searchTemplate and deleteByQuery) for elasticsearch-6.x-plugin.
-* Fix the unexpected RunningContext recreation in the Tomcat plugin.
-* Fix the potential NPE when trace_sql_parameters is enabled.
-* Update `byte-buddy` to 1.10.19.
-* Fix thrift plugin trace link broken when intermediate service does not mount agent
-* Fix thrift plugin collects wrong args when the method without parameter.
-* Fix DataCarrier's `org.apache.skywalking.apm.commons.datacarrier.buffer.Buffer` implementation isn't activated in `IF_POSSIBLE` mode.
-* Fix ArrayBlockingQueueBuffer's useless `IF_POSSIBLE` mode list
-* Support building gRPC TLS channel but CA file is not required.
-* Add witness method mechanism in the agent plugin core.
-* Add Dolphinscheduler plugin definition.
-* Make sampling still works when the trace ignores plug-in activation.
-* Fix mssql-plugin occur ClassCastException when call the method of return generate key.
-* The operation name of dubbo and dubbo-2.7.x-plugin, has been changed as the `groupValue/className.methodName` format
-* Fix bug that rocketmq-plugin set the wrong tag.
-* Fix duplicated `EnhancedInstance` interface added.
-* Fix thread leaks caused by the elasticsearch-6.x-plugin plugin.
-* Support reading segmentId and spanId with toolkit.
-* Fix RestTemplate plugin recording url tag with wrong port
-* Support collecting logs and forwarding through gRPC.
-* Support config `agent.sample_n_per_3_secs` can be changed in the runtime.
-* Support DNS periodic resolving mechanism to update backend service.
-* Support config `agent.trace.ignore_path` can be changed in the runtime.
+
+* Supports modifying span attributes in async mode.
+* Agent supports the collection of JVM arguments and jar dependency information.
+* [Temporary] Support authentication for log report channel. This feature and grpc channel is going to be removed after
+  Satellite 0.2.0 release.
+* Remove deprecated gRPC method, `io.grpc.ManagedChannelBuilder#nameResolverFactory`.
+  See [gRPC-java 7133](https://github.com/grpc/grpc-java/issues/7133) for more details.
+* Add `Neo4j-4.x` plugin.
+* Correct `profile.duration` to `profile.max_duration` in the default `agent.config` file.
+* Fix the response time of gRPC.
+* Support parameter collection for SqlServer.
+* Add `ShardingSphere-5.0.0-beta` plugin.
+* Fix some method exception error.
+* Fix async finish repeatedly in `spring-webflux-5.x-webclient` plugin.
+* Add agent plugin to support Sentinel.
+* Move `ehcache-2.x` plugin as an optional plugin.
+* Support `guava-cache` plugin.
+* Enhance the compatibility of `mysql-8.x-plugin` plugin.
+* Support Kafka SASL login module.
 
 #### OAP-Backend
-* Make meter receiver support MAL.
-* Support influxDB connection response format option. Fix some error when use JSON as influxDB response format.
-* Support Kafka MirrorMaker 2.0 to replicate topics between Kafka clusters.
-* Add the rule name field to alarm record storage entity as a part of ID, to support multiple alarm rules triggered for one entity. The scope id has been removed from the ID.
-* Fix MAL concurrent execution issues.
-* Fix group name can't be queried in the GraphQL.
-* Fix potential gRPC connection leak(not closed) for the channels among OAP instances.
-* Filter OAP instances(unassigned in booting stage) of the empty IP in KubernetesCoordinator.
-* Add component ID for Python aiohttp plugin requester and server.
-* Fix H2 in-memory database table missing issues
-* Add component ID for Python pyramid plugin server.
-* Add component ID for NodeJS Axios plugin.
-* Fix searchService method error in storage-influxdb-plugin.
-* Add JavaScript component ID.
-* Fix CVE of UninstrumentedGateways in Dynamic Configuration activation.
-* Improve query performance in storage-influxdb-plugin.
-* Fix the uuid field in GRPCConfigWatcherRegister is not updated.
-* Support Envoy {AccessLog,Metrics}Service API V3.
-* Adopt the [MAL](docs/en/concepts-and-designs/mal.md) in Envoy metrics service analyzer.
-* Fix the priority setting doesn't work of the ALS analyzers.
-* Fix bug that `endpoint-name-grouping.yml` is not customizable in Dockerized case.
-* Fix bug that istio version metric type on UI template mismatches the otel rule.
-* Improve ReadWriteSafeCache concurrency read-write performance
-* Fix bug that if use JSON as InfluxDB.ResponseFormat then NumberFormatException maybe occur.
-* Fix `timeBucket` not taking effect in EqualsAndHashCode annotation of some relationship metrics.
-* Fix `SharingServerConfig`'s propertie is not correct in the `application.yml`, contextPath -> restConnextPath.
-* Istio control plane: remove redundant metrics and polish panel layout.
-* Fix bug endpoint name grouping not work due to setting service name and endpoint name out of order.
-* Fix receiver analysis error count metrics.
-* Log collecting and query implementation.
-* Support Alarm to feishu.
-* Add the implementation of ConfigurationDiscovery on the OAP side.
-* Fix bug in `parseInternalErrorCode` where some error codes are never reached.
-* OAL supports multiple values when as numeric.
-* Add node information from the Openensus proto to the labels of the samples, to support the identification of the source of the Metric data.
-* Fix bug that the same sample name in one MAL expression caused `IllegalArgumentException` in `Analyzer.analyse`.
-* Add the text analyzer for querying log in the es storage.
-* Chore:  Remove duplicate codes in Envoy ALS handler.
-* Remove the strict rule of OAL disable statement parameter.
-* Fix a legal metric query adoption bug. Don't support global level metric query.
+
+* Disable Spring sleuth meter analyzer by default.
+* Only count 5xx as error in Envoy ALS receiver.
+* Upgrade apollo core caused by CVE-2020-15170.
+* Upgrade kubernetes client caused by CVE-2020-28052.
+* Upgrade Elasticsearch 7 client caused by CVE-2020-7014.
+* Upgrade jackson related libs caused by CVE-2018-11307, CVE-2018-14718 ~ CVE-2018-14721, CVE-2018-19360 ~
+  CVE-2018-19362, CVE-2019-14379, CVE-2019-14540, CVE-2019-14892, CVE-2019-14893, CVE-2019-16335, CVE-2019-16942,
+  CVE-2019-16943, CVE-2019-17267, CVE-2019-17531, CVE-2019-20330, CVE-2020-8840, CVE-2020-9546, CVE-2020-9547,
+  CVE-2020-9548, CVE-2018-12022, CVE-2018-12023, CVE-2019-12086, CVE-2019-14439, CVE-2020-10672, CVE-2020-10673,
+  CVE-2020-10968, CVE-2020-10969, CVE-2020-11111, CVE-2020-11112, CVE-2020-11113, CVE-2020-11619, CVE-2020-11620,
+  CVE-2020-14060, CVE-2020-14061, CVE-2020-14062, CVE-2020-14195, CVE-2020-24616, CVE-2020-24750, CVE-2020-25649,
+  CVE-2020-35490, CVE-2020-35491, CVE-2020-35728 and CVE-2020-36179 ~ CVE-2020-36190.
+* Exclude log4j 1.x caused by CVE-2019-17571.
+* Upgrade log4j 2.x caused by CVE-2020-9488.
+* Upgrade nacos libs caused by CVE-2021-29441 and CVE-2021-29442.
+* Upgrade netty caused by CVE-2019-20444, CVE-2019-20445, CVE-2019-16869, CVE-2020-11612, CVE-2021-21290, CVE-2021-21295
+  and CVE-2021-21409.
+* Upgrade consul client caused by CVE-2018-1000844, CVE-2018-1000850.
+* Upgrade zookeeper caused by CVE-2019-0201, zookeeper cluster coordinator plugin now requires zookeeper server 3.5+.
+* Upgrade snake yaml caused by CVE-2017-18640.
+* Upgrade embed tomcat caused by CVE-2020-13935.
+* Upgrade commons-lang3 to avoid potential NPE in some JDK versions.
+* OAL supports generating metrics from events.
+* Support endpoint name grouping by OpenAPI definitions.
+* Concurrent create PrepareRequest when persist Metrics
+* Fix CounterWindow increase computing issue.
+* Performance: optimize Envoy ALS analyzer performance in high traffic load scenario (reduce ~1cpu in ~10k RPS).
+* Performance: trim useless metadata fields in Envoy ALS metadata to improve performance.
+* Fix: slowDBAccessThreshold dynamic config error when not configured.
+* Performance: cache regex pattern and result, optimize string concatenation in Envy ALS analyzer.
+* Performance: cache metrics id and entity id in `Metrics` and `ISource`.
+* Performance: enhance persistent session mechanism, about differentiating cache timeout for different dimensionality
+  metrics. The timeout of the cache for minute and hour level metrics has been prolonged to ~5 min.
+* Performance: Add L1 aggregation flush period, which reduce the CPU load and help young GC.
+* Support connectTimeout and socketTimeout settings for ElasticSearch6 and ElasticSearch7 storages.
+* Re-implement storage session mechanism, cached metrics are removed only according to their last access timestamp,
+  rather than first time. This makes sure hot data never gets removed unexpectedly.
+* Support session expired threshold configurable.
+* Fix InfluxDB storage-plugin Metrics#multiGet issue.
+* Replace zuul proxy with spring cloud gateway 2.x. in webapp module.
+* Upgrade etcd cluster coordinator and dynamic configuration to v3.x.
+* Configuration: Allow configuring server maximum request header size.
+* Add thread state metric and class loaded info metric to JVMMetric.
+* Performance: compile LAL DSL statically and run with type checked.
+* Add pagination to event query protocol.
+* Performance: optimize Envoy error logs persistence performance.
+* Performance: remove the synchronous persistence mechanism from batch ElasticSearch DAO. Because the current enhanced
+  persistent session mechanism, don't require the data queryable immediately after the insert and update anymore.
+* Performance: share `flushInterval` setting for both metrics and record data, due
+  to `synchronous persistence mechanism` removed. Record flush interval used to be hardcoded as 10s.
+* Remove `syncBulkActions` in ElasticSearch storage option.
+* Increase the default bulkActions(env, SW_STORAGE_ES_BULK_ACTIONS) to 5000(from 1000).
+* Increase the flush interval of ElasticSearch indices to 15s(from 10s)
+* Provide distinct for elements of metadata lists. Due to the more aggressive asynchronous flush, metadata lists have
+  more chances including duplicate elements. Don't need this as indicate anymore.
+* Reduce the flush period of hour and day level metrics, only run in 4 times of regular persistent period. This means
+  default flush period of hour and day level metrics are 25s * 4.
+* Performance: optimize IDs read of ElasticSearch storage options(6 and 7). Use the physical index rather than template
+  alias name.
+* Adjust index refresh period as INT(flushInterval * 2/3), it used to be as same as bulk flush period. At the edge case,
+  in low traffic(traffic < bulkActions in the whole period), there is a possible case, 2 period bulks are included in
+  one index refresh rebuild operation, which could cause version conflicts. And this case can't be fixed
+  through `core/persistentPeriod` as the bulk fresh is not controlled by the persistent timer anymore.
 
 #### UI
-* Fix un-removed tags in trace query.
-* Fix unexpected metrics name on single value component.
-* Don't allow negative value as the refresh period.
-* Fix style issue in trace table view.
-* Separation Log and Dashboard selector data to avoid conflicts.
-* Fix trace instance selector bug.
-* Fix Unnecessary sidebar in tooltips for charts.
-* Refactor dashboard query in a common script.
-* Implement refreshing data for topology by updating date.
-* Implement group selector in the topology.
-* Fix all as default parameter for services selector.
-* Add icon for Python aiohttp plugin.
-* Add icon for Python pyramid plugin.
-* Fix topology render all services nodes when groups changed.
-* Fix rk-footer utc input's width.
-* Update rk-icon and rewrite rk-header svg tags with rk-icon.
-* Add icon for http type.
-* Fix rk-footer utc without local storage.
-* Sort group names in the topology.
-* Add logo for Dolphinscheduler.
-* Fix dashboard wrong instance.
-* Add a legend for the topology.
-* Update the condition of unhealthy cube.
-* Fix: use icons to replace buttons for task list in profile.
-* Fix: support `=` in the tag value in the trace query page.
-* Add envoy proxy component logo.
-* Chore: set up license-eye to check license headers and add missing license headers.
-* Fix prop for instances-survey and endpoints-survey.
-* Fix envoy icon in topology.
-* Implement the service logs on UI.
-* Change the flask icon to light version for a better view of topology dark theme.
-* Implement viewing logs on trace page.
+
+* Fix the date component for log conditions.
+* Fix selector keys for duplicate options.
+* Add Python celery plugin.
+* Fix default config for metrics.
+* Fix trace table for profile ui.
+* Fix the error of server response time in the topology.
+* Fix chart types for setting metrics configure.
 
 #### Documentation
-* Update the documents of backend fetcher and self observability about the latest configurations.
-* Add documents about the group name of service.
-* Update docs about the latest UI.
-* Update the document of backend trace sampling with the latest configuration.
-* Update kafka plugin support version to 2.6.1.
-* Add FAQ about `Fix compiling on Mac M1 chip`.
 
-All issues and pull requests are [here](https://github.com/apache/skywalking/milestone/68?closed=1)
+* Add FAQ about `Elasticsearch exception type=version_conflict_engine_exception since 8.7.0`
+
+All issues and pull requests are [here](https://github.com/apache/skywalking/milestone/90?closed=1)
 
 ------------------
 Find change logs of all versions [here](changes).

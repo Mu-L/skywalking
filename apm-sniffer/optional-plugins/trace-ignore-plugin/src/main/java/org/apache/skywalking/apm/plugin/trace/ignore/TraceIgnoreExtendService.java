@@ -35,13 +35,12 @@ public class TraceIgnoreExtendService extends SamplingService {
     private static final ILog LOGGER = LogManager.getLogger(TraceIgnoreExtendService.class);
     private static final String PATTERN_SEPARATOR = ",";
     private TracePathMatcher pathMatcher = new FastPathMatcher();
-    private String[] patterns = new String[] {};
+    private volatile String[] patterns = new String[] {};
     private TraceIgnorePatternWatcher traceIgnorePatternWatcher;
 
     @Override
     public void prepare() {
         super.prepare();
-        traceIgnorePatternWatcher = new TraceIgnorePatternWatcher("agent.trace.ignore_path", this);
     }
 
     @Override
@@ -53,6 +52,7 @@ public class TraceIgnoreExtendService extends SamplingService {
             patterns = IgnoreConfig.Trace.IGNORE_PATH.split(PATTERN_SEPARATOR);
         }
 
+        traceIgnorePatternWatcher = new TraceIgnorePatternWatcher("agent.trace.ignore_path", this);
         ServiceManager.INSTANCE.findService(ConfigurationDiscoveryService.class)
                                .registerAgentConfigChangeWatcher(traceIgnorePatternWatcher);
 
@@ -89,6 +89,8 @@ public class TraceIgnoreExtendService extends SamplingService {
     void handleTraceIgnorePatternsChanged() {
         if (StringUtil.isNotBlank(traceIgnorePatternWatcher.getTraceIgnorePathPatterns())) {
             patterns = traceIgnorePatternWatcher.getTraceIgnorePathPatterns().split(PATTERN_SEPARATOR);
+        } else {
+            patterns = new String[] {};
         }
     }
 }

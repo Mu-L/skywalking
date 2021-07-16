@@ -17,6 +17,7 @@
 
 package org.apache.skywalking.oap.log.analyzer.provider.log.listener;
 
+import com.google.protobuf.Message;
 import org.apache.skywalking.apm.network.logging.v3.LogData;
 
 /**
@@ -31,6 +32,7 @@ public interface LogAnalysisListener {
 
     /**
      * Parse the raw data from the probe.
+     * @return {@code this} for chaining.
      */
-    void parse(LogData.Builder logData);
+    LogAnalysisListener parse(LogData.Builder logData, final Message extraLog);
 }

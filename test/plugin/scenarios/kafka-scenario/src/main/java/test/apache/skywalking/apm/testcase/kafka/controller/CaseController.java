@@ -21,8 +21,12 @@ package test.apache.skywalking.apm.testcase.kafka.controller;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import java.util.List;
+import java.util.ArrayList;
 import javax.annotation.PostConstruct;
 
 import okhttp3.OkHttpClient;
@@ -37,6 +41,8 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.PartitionInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.skywalking.apm.toolkit.kafka.KafkaPollAndInvoke;
@@ -63,6 +69,7 @@ public class CaseController {
     private String topicName;
     private String topicName2;
     private Pattern topicPattern;
+    private String topicNameForAssign;
 
     private static volatile boolean KAFKA_STATUS = false;
 
@@ -70,6 +77,7 @@ public class CaseController {
     private void setUp() {
         topicName = "test";
         topicName2 = "test2";
+        topicNameForAssign = "assign";
         topicPattern = Pattern.compile("test.");
         new CheckKafkaProducerThread(bootstrapServers).start();
     }
@@ -93,6 +101,29 @@ public class CaseController {
                 LOGGER.info("send success metadata={}", metadata);
             };
             producer.send(record2, callback2);
+
+            ProducerRecord<String, String> record3 = new ProducerRecord<String, String>(topicName2, "testKey", Integer.toString(1));
+            final Future<RecordMetadata> result = producer.send(record3);
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        // Since linger.ms is 5ms, 10ms should be enough for Kakfa producer to send the message.
+                        RecordMetadata metadata = result.get(10, TimeUnit.MILLISECONDS);
+                        LOGGER.info("send success metadata={}", metadata);
+                    } catch (Throwable t) {
+                        LOGGER.error("failed to send the message to Kafka", t);
+                    }
+                }
+            }.start();
+            ProducerRecord<String, String> recordForAssign = new ProducerRecord<String, String>(topicNameForAssign, "testKey", Integer.toString(1));
+            recordForAssign.headers().add("TEST", "TEST".getBytes());
+            producer.send(recordForAssign, new Callback() {
+                @Override
+                public void onCompletion(RecordMetadata metadata, Exception exception) {
+                    LOGGER.info("send success metadata={}", metadata);
+                }
+            });
         }, bootstrapServers);
 
         Thread thread = new ConsumerThread();
@@ -100,9 +131,14 @@ public class CaseController {
 
         Thread thread2 = new ConsumerThread2();
         thread2.start();
+
+        Thread thread3 = new ConsumerAssignThread();
+        thread3.start();
+
         try {
             thread.join();
             thread2.join();
+            thread3.join();
         } catch (InterruptedException e) {
             // ignore
         }
@@ -262,6 +298,54 @@ public class CaseController {
                 return true;
             }
             return false;
+        }
+    }
+
+    public class ConsumerAssignThread extends Thread {
+        @Override
+        public void run() {
+            Properties consumerProperties = new Properties();
+            consumerProperties.put("bootstrap.servers", bootstrapServers);
+            consumerProperties.put("group.id", "testGroup3");
+            consumerProperties.put("enable.auto.commit", "true");
+            consumerProperties.put("auto.commit.interval.ms", "1000");
+            consumerProperties.put("auto.offset.reset", "earliest");
+            consumerProperties.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+            consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+            KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProperties);
+            List<TopicPartition> assignTopics = new ArrayList<>();
+            assignTopics(consumer.partitionsFor(topicNameForAssign), assignTopics);
+            consumer.assign(assignTopics);
+            int i = 0;
+            while (i++ <= 10) {
+                try {
+                    Thread.sleep(1 * 1000);
+                } catch (InterruptedException e) {
+                }
+
+                ConsumerRecords<String, String> records = consumer.poll(100);
+
+                if (!records.isEmpty()) {
+                    for (ConsumerRecord<String, String> record : records) {
+                        LOGGER.info("header: {}", new String(record.headers()
+                                .headers("TEST")
+                                .iterator()
+                                .next()
+                                .value()));
+                        LOGGER.info("offset = {}, key = {}, value = {}", record.offset(), record.key(), record.value());
+                    }
+                    break;
+                }
+            }
+
+            consumer.close();
+        }
+    }
+
+    private void assignTopics(List<PartitionInfo> topicInfo, List<TopicPartition> assignTopics) {
+        for (PartitionInfo pif : topicInfo) {
+            TopicPartition tp = new TopicPartition(pif.topic(), pif.partition());
+            assignTopics.add(tp);
         }
     }
 }

@@ -18,10 +18,15 @@
 
 package org.apache.skywalking.e2e.metrics;
 
+import com.google.common.collect.ImmutableMap;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 import org.apache.skywalking.e2e.AbstractQuery;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 @Data
 @Accessors(fluent = true)
@@ -64,13 +69,34 @@ public class MetricsQuery extends AbstractQuery<MetricsQuery> {
         SERVICE_INSTANCE_SLA
     };
 
+    public static String INSTANCE_JVM_MEMORY_HEAP = "instance_jvm_memory_heap";
+    public static String INSTANCE_JVM_MEMORY_HEAP_MAX = "instance_jvm_memory_heap_max";
+    public static String INSTANCE_JVM_MEMORY_NOHEAP = "instance_jvm_memory_noheap";
     public static String INSTANCE_JVM_THREAD_LIVE_COUNT = "instance_jvm_thread_live_count";
     public static String INSTANCE_JVM_THREAD_DAEMON_COUNT = "instance_jvm_thread_daemon_count";
     public static String INSTANCE_JVM_THREAD_PEAK_COUNT = "instance_jvm_thread_peak_count";
+    public static String INSTANCE_JVM_THREAD_RUNNABLE_STATE_THREAD_COUNT = "instance_jvm_thread_runnable_state_thread_count";
+    public static String INSTANCE_JVM_CLASS_LOADED_CLASS_COUNT = "instance_jvm_class_loaded_class_count";
+    public static String INSTANCE_JVM_CLASS_TOTAL_LOADED_CLASS_COUNT = "instance_jvm_class_total_loaded_class_count";
     public static String [] ALL_INSTANCE_JVM_METRICS = {
+        INSTANCE_JVM_CLASS_TOTAL_LOADED_CLASS_COUNT,
+        INSTANCE_JVM_CLASS_LOADED_CLASS_COUNT,
+        INSTANCE_JVM_THREAD_RUNNABLE_STATE_THREAD_COUNT,
+        INSTANCE_JVM_THREAD_LIVE_COUNT,
         INSTANCE_JVM_THREAD_DAEMON_COUNT,
+        INSTANCE_JVM_THREAD_PEAK_COUNT,
+        INSTANCE_JVM_MEMORY_NOHEAP,
+        INSTANCE_JVM_MEMORY_HEAP_MAX,
+        INSTANCE_JVM_MEMORY_HEAP,
+    };
+
+    public static String [] ALL_INSTANCE_JVM_METRICS_COMPAT = {
+        INSTANCE_JVM_THREAD_LIVE_COUNT,
         INSTANCE_JVM_THREAD_DAEMON_COUNT,
-        INSTANCE_JVM_THREAD_PEAK_COUNT
+        INSTANCE_JVM_THREAD_PEAK_COUNT,
+        INSTANCE_JVM_MEMORY_NOHEAP,
+        INSTANCE_JVM_MEMORY_HEAP_MAX,
+        INSTANCE_JVM_MEMORY_HEAP,
     };
 
     public static String SERVICE_RELATION_CLIENT_CPM = "service_relation_client_cpm";
@@ -132,10 +158,8 @@ public class MetricsQuery extends AbstractQuery<MetricsQuery> {
         "envoy_worker_threads_max"
     };
 
-    public static String METER_INSTANCE_PERSISTENCE_EXECUTE_PERCENTILE = "meter_oap_instance_persistence_execute_percentile";
-
     public static String[] ALL_SO11Y_LABELED_METRICS = {
-        METER_INSTANCE_PERSISTENCE_EXECUTE_PERCENTILE
+        // Nothing to check for now.
     };
     private String id;
     private String metricsName;
@@ -149,4 +173,28 @@ public class MetricsQuery extends AbstractQuery<MetricsQuery> {
         METER_PROCESS_FILES_MAX
     };
 
+    public static Map<String, List<String>> SIMPLE_ZABBIX_METERS = ImmutableMap.<String, List<String>>builder()
+            .put("meter_agent_system_cpu_util", Arrays.asList("idle"))
+            .put("meter_agent_vm_memory_size", Arrays.asList("total"))
+            .put("meter_agent_vfs_fs_size", Arrays.asList("/-total"))
+            .build();
+
+    public static String[] SIMPLE_PROM_VM_METERS = {
+        "meter_vm_memory_used",
+        "meter_vm_memory_total",
+        "meter_vm_memory_available",
+        "meter_vm_disk_written",
+        "meter_vm_network_transmit",
+        "meter_vm_tcp_curr_estab",
+        "meter_vm_tcp_alloc",
+        "meter_vm_sockets_used",
+        "meter_vm_udp_inuse",
+        "meter_vm_filefd_allocated"
+    };
+
+    public static Map<String, List<String>> SIMPLE_PROM_VM_LABELED_METERS = ImmutableMap.<String, List<String>>builder()
+        .put("meter_vm_cpu_average_used", Arrays.asList("idle"))
+        .put("meter_vm_filesystem_percentage", Arrays.asList("/etc/hosts"))
+        .build();
 }
+

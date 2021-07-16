@@ -24,13 +24,14 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.skywalking.apm.commons.datacarrier.common.AtomicRangeInteger;
+import org.apache.skywalking.oap.server.core.alarm.AlarmRecord;
 import org.apache.skywalking.oap.server.core.analysis.TimeBucket;
 import org.apache.skywalking.oap.server.core.analysis.manual.log.LogRecord;
 import org.apache.skywalking.oap.server.core.analysis.manual.searchtag.Tag;
 import org.apache.skywalking.oap.server.core.analysis.manual.segment.SegmentRecord;
 import org.apache.skywalking.oap.server.core.analysis.record.Record;
 import org.apache.skywalking.oap.server.core.storage.IRecordDAO;
-import org.apache.skywalking.oap.server.core.storage.StorageBuilder;
+import org.apache.skywalking.oap.server.core.storage.StorageHashMapBuilder;
 import org.apache.skywalking.oap.server.core.storage.model.Model;
 import org.apache.skywalking.oap.server.library.client.request.InsertRequest;
 import org.apache.skywalking.oap.server.storage.plugin.influxdb.TableMetaInfo;
@@ -41,9 +42,9 @@ public class RecordDAO implements IRecordDAO {
     private static final int PADDING_SIZE = 1_000_000;
     private static final AtomicRangeInteger SUFFIX = new AtomicRangeInteger(0, PADDING_SIZE);
 
-    private final StorageBuilder<Record> storageBuilder;
+    private final StorageHashMapBuilder<Record> storageBuilder;
 
-    public RecordDAO(StorageBuilder<Record> storageBuilder) {
+    public RecordDAO(StorageHashMapBuilder<Record> storageBuilder) {
         this.storageBuilder = storageBuilder;
     }
 
@@ -62,6 +63,8 @@ public class RecordDAO implements IRecordDAO {
             rawTags = ((SegmentRecord) record).getTagsRawData();
         } else if (LogRecord.INDEX_NAME.equals(model.getName())) {
             rawTags = ((LogRecord) record).getTags();
+        } else if (AlarmRecord.INDEX_NAME.equals(model.getName())) {
+            rawTags = ((AlarmRecord) record).getTags();
         }
         if (nonNull(rawTags)) {
             Map<String, List<Tag>> collect = rawTags.stream()

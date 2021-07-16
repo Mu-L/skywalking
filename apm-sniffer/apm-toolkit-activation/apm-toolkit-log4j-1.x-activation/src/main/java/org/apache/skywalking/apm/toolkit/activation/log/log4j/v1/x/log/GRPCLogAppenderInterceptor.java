@@ -20,10 +20,12 @@ package org.apache.skywalking.apm.toolkit.activation.log.log4j.v1.x.log;
 
 import java.lang.reflect.Method;
 import java.util.Objects;
-
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.spi.LoggingEvent;
 import org.apache.skywalking.apm.agent.core.boot.ServiceManager;
 import org.apache.skywalking.apm.agent.core.conf.Config;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
+import org.apache.skywalking.apm.agent.core.context.util.ThrowableTransformer;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
@@ -34,7 +36,6 @@ import org.apache.skywalking.apm.network.logging.v3.LogDataBody;
 import org.apache.skywalking.apm.network.logging.v3.LogTags;
 import org.apache.skywalking.apm.network.logging.v3.TextLog;
 import org.apache.skywalking.apm.network.logging.v3.TraceContext;
-import org.slf4j.event.LoggingEvent;
 
 public class GRPCLogAppenderInterceptor implements InstanceMethodsAroundInterceptor {
 
@@ -51,7 +52,7 @@ public class GRPCLogAppenderInterceptor implements InstanceMethodsAroundIntercep
         }
         LoggingEvent event = (LoggingEvent) allArguments[0];
         if (Objects.nonNull(event)) {
-            client.produce(transform(event));
+            client.produce(transform((AppenderSkeleton) objInst, event));
         }
     }
 
@@ -70,10 +71,12 @@ public class GRPCLogAppenderInterceptor implements InstanceMethodsAroundIntercep
     /**
      * transforms {@link LoggingEvent}  to {@link LogData}
      *
+     *
+     * @param appender the real {@link AppenderSkeleton appender}
      * @param event {@link LoggingEvent}
      * @return {@link LogData} with filtered trace context in order to reduce the cost on the network
      */
-    private LogData transform(LoggingEvent event) {
+    private LogData transform(final AppenderSkeleton appender, LoggingEvent event) {
         LogData.Builder builder = LogData.newBuilder()
                 .setTimestamp(event.getTimeStamp())
                 .setService(Config.Agent.SERVICE_NAME)
@@ -92,12 +95,21 @@ public class GRPCLogAppenderInterceptor implements InstanceMethodsAroundIntercep
                                 .setKey("thread").setValue(event.getThreadName()).build())
                         .build())
                 .setBody(LogDataBody.newBuilder().setType(LogDataBody.ContentCase.TEXT.name())
-                        .setText(TextLog.newBuilder().setText(event.getMessage()).build()).build());
+                                    .setText(TextLog.newBuilder().setText(transformLogText(appender, event)).build()).build());
         return -1 == ContextManager.getSpanId() ? builder.build()
                 : builder.setTraceContext(TraceContext.newBuilder()
                         .setTraceId(ContextManager.getGlobalTraceId())
                         .setSpanId(ContextManager.getSpanId())
                         .setTraceSegmentId(ContextManager.getSegmentId())
                         .build()).build();
+    }
+
+    private String transformLogText(final AppenderSkeleton appender, final LoggingEvent event) {
+        if (appender.getLayout() != null) {
+            return appender.getLayout().format(event);
+        }
+        final String throwableString = Objects.isNull(event.getThrowableInformation()) ? "" :
+            ThrowableTransformer.INSTANCE.convert2String(event.getThrowableInformation().getThrowable(), 2048);
+        return event.getMessage() + "\n" + throwableString;
     }
 }

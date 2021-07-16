@@ -26,10 +26,12 @@ import org.apache.skywalking.oap.server.core.analysis.DownSampling;
 import org.apache.skywalking.oap.server.core.storage.IHistoryDeleteDAO;
 import org.apache.skywalking.oap.server.core.storage.model.Model;
 import org.apache.skywalking.oap.server.library.client.elasticsearch.ElasticSearchClient;
+import org.apache.skywalking.oap.server.storage.plugin.elasticsearch.IndicesMetadataCache;
 import org.joda.time.DateTime;
 
 @Slf4j
 public class HistoryDeleteEsDAO extends EsDAO implements IHistoryDeleteDAO {
+
     public HistoryDeleteEsDAO(ElasticSearchClient client) {
         super(client);
     }
@@ -50,8 +52,8 @@ public class HistoryDeleteEsDAO extends EsDAO implements IHistoryDeleteDAO {
             }
         }
         deadline = Long.parseLong(new DateTime().plusDays(-ttl).toString("yyyyMMdd"));
-
-        List<String> indexes = client.retrievalIndexByAliases(model.getName());
+        String tableName = IndexController.INSTANCE.getTableName(model);
+        List<String> indexes = client.retrievalIndexByAliases(tableName);
 
         List<String> prepareDeleteIndexes = new ArrayList<>();
         List<String> leftIndices = new ArrayList<>();
@@ -67,9 +69,42 @@ public class HistoryDeleteEsDAO extends EsDAO implements IHistoryDeleteDAO {
             client.deleteByIndexName(prepareDeleteIndex);
         }
         String latestIndex = TimeSeriesUtils.latestWriteIndexName(model);
-        String formattedLatestIndex =  client.formatIndexName(latestIndex);
+        String formattedLatestIndex = client.formatIndexName(latestIndex);
         if (!leftIndices.contains(formattedLatestIndex)) {
             client.createIndex(latestIndex);
         }
+    }
+
+    @Override
+    public void inspect(List<Model> models, String timeBucketColumnName) {
+        List<String> indices = new ArrayList<>();
+        models.forEach(model -> {
+            if (!model.isTimeSeries()) {
+                return;
+            }
+
+            ElasticSearchClient client = getClient();
+
+            if (!model.isRecord()) {
+                if (!DownSampling.Minute.equals(model.getDownsampling())) {
+                    /*
+                     * As all metrics data in different down sampling rule of one day are in the same index, the inspection
+                     * operation is only required to run once.
+                     */
+                    return;
+                }
+            }
+            String tableName = IndexController.INSTANCE.getTableName(model);
+            List<String> indexes;
+            try {
+                indexes = client.retrievalIndexByAliases(tableName);
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+                return;
+            }
+
+            indices.addAll(indexes);
+        });
+        IndicesMetadataCache.INSTANCE.update(indices);
     }
 }

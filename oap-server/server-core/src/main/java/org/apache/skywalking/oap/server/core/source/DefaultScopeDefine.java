@@ -81,6 +81,10 @@ public class DefaultScopeDefine {
     public static final int LOG = 41;
     public static final int ENDPOINT_META = 42;
 
+    public static final int EVENT = 43;
+
+    public static final int SERVICE_INSTANCE_JVM_CLASS = 44;
+
     /**
      * Catalog of scope, the metrics processor could use this to group all generated metrics by oal rt.
      */

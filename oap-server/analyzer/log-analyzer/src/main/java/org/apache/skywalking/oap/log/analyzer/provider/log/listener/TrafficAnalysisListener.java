@@ -17,6 +17,7 @@
 
 package org.apache.skywalking.oap.log.analyzer.provider.log.listener;
 
+import com.google.protobuf.Message;
 import lombok.RequiredArgsConstructor;
 import org.apache.skywalking.apm.network.logging.v3.LogData;
 import org.apache.skywalking.apm.util.StringUtil;
@@ -61,7 +62,8 @@ public class TrafficAnalysisListener implements LogAnalysisListener {
     }
 
     @Override
-    public void parse(final LogData.Builder logData) {
+    public LogAnalysisListener parse(final LogData.Builder logData,
+                                     final Message extraLog) {
         final long timeBucket = TimeBucket.getTimeBucket(System.currentTimeMillis(), DownSampling.Minute);
         // to service traffic
         String serviceName = namingControl.formatServiceName(logData.getService());
@@ -85,6 +87,7 @@ public class TrafficAnalysisListener implements LogAnalysisListener {
             endpointMeta.setEndpoint(namingControl.formatEndpointName(serviceName, logData.getEndpoint()));
             endpointMeta.setTimeBucket(timeBucket);
         }
+        return this;
     }
 
     public static class Factory implements LogAnalysisListenerFactory {
@@ -96,13 +99,12 @@ public class TrafficAnalysisListener implements LogAnalysisListener {
                                                .provider()
                                                .getService(SourceReceiver.class);
             this.namingControl = moduleManager.find(CoreModule.NAME)
-                                              .provider().
-                                                  getService(NamingControl.class);
+                                              .provider()
+                                              .getService(NamingControl.class);
         }
 
         @Override
-        public LogAnalysisListener create(final ModuleManager moduleManager,
-                                          final LogAnalyzerModuleConfig moduleConfig) {
+        public LogAnalysisListener create() {
             return new TrafficAnalysisListener(sourceReceiver, namingControl);
         }
     }

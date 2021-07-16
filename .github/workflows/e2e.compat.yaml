@@ -21,11 +21,16 @@ on:
   schedule:
     - cron: '0 18 * * *'
 
+concurrency:
+  group: e2e-compat-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  Compatability:
-    name: Compatability
+  Compatibility:
+    if: (github.event_name == 'schedule' && github.repository == 'apache/skywalking') || (github.event_name != 'schedule')
+    name: Compatibility
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       SW_SIMPLE_CASE: compat
       SW_AGENT_JDK_VERSION: 11
@@ -34,7 +39,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
+      - name: Set Skip Env Var
+        uses: ./.github/actions/skip
       - name: Cache local Maven repository
+        if: env.SKIP_CI != 'true'
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
@@ -42,15 +50,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Set Up Java
+        if: env.SKIP_CI != 'true'
         uses: actions/setup-java@v1
         with:
           java-version: 11
       - name: Run E2E Test
+        if: env.SKIP_CI != 'true'
         uses: ./.github/actions/e2e-test
         with:
-          test_class: org.apache.skywalking.e2e.simple.SimpleE2E
-      - uses: actions/upload-artifact@v1
-        if: failure()
-        with:
-          name: logs
-          path: logs
+          test_class: org.apache.skywalking.e2e.compat.CompatE2E

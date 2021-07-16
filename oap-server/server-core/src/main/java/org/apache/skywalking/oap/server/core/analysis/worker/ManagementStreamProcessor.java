@@ -18,22 +18,24 @@
 
 package org.apache.skywalking.oap.server.core.analysis.worker;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.skywalking.oap.server.core.CoreModule;
 import org.apache.skywalking.oap.server.core.UnexpectedException;
-import org.apache.skywalking.oap.server.core.analysis.DisableRegister;
 import org.apache.skywalking.oap.server.core.analysis.DownSampling;
 import org.apache.skywalking.oap.server.core.analysis.Stream;
 import org.apache.skywalking.oap.server.core.analysis.StreamProcessor;
 import org.apache.skywalking.oap.server.core.analysis.management.ManagementData;
 import org.apache.skywalking.oap.server.core.storage.IManagementDAO;
+import org.apache.skywalking.oap.server.core.storage.StorageBuilderFactory;
 import org.apache.skywalking.oap.server.core.storage.StorageDAO;
 import org.apache.skywalking.oap.server.core.storage.StorageException;
 import org.apache.skywalking.oap.server.core.storage.StorageModule;
 import org.apache.skywalking.oap.server.core.storage.annotation.Storage;
 import org.apache.skywalking.oap.server.core.storage.model.Model;
 import org.apache.skywalking.oap.server.core.storage.model.ModelCreator;
+import org.apache.skywalking.oap.server.core.storage.type.StorageBuilder;
 import org.apache.skywalking.oap.server.library.module.ModuleDefineHolder;
 
 /**
@@ -60,21 +62,23 @@ public class ManagementStreamProcessor implements StreamProcessor<ManagementData
 
     @Override
     public void create(final ModuleDefineHolder moduleDefineHolder, final Stream stream, final Class<? extends ManagementData> streamClass) throws StorageException {
-        if (DisableRegister.INSTANCE.include(stream.name())) {
-            return;
-        }
+        final StorageBuilderFactory storageBuilderFactory = moduleDefineHolder.find(StorageModule.NAME)
+                                                                              .provider()
+                                                                              .getService(StorageBuilderFactory.class);
+        final Class<? extends StorageBuilder> builder = storageBuilderFactory.builderOf(streamClass, stream.builder());
 
         StorageDAO storageDAO = moduleDefineHolder.find(StorageModule.NAME).provider().getService(StorageDAO.class);
         IManagementDAO managementDAO;
         try {
-            managementDAO = storageDAO.newManagementDao(stream.builder().newInstance());
-        } catch (InstantiationException | IllegalAccessException e) {
+            managementDAO = storageDAO.newManagementDao(builder.getDeclaredConstructor().newInstance());
+        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
             throw new UnexpectedException("Create " + stream.builder()
                     .getSimpleName() + " none stream record DAO failure.", e);
         }
 
         ModelCreator modelSetter = moduleDefineHolder.find(CoreModule.NAME).provider().getService(ModelCreator.class);
-        Model model = modelSetter.add(streamClass, stream.scopeId(), new Storage(stream.name(), DownSampling.None), false);
+        // Management stream doesn't read data from database during the persistent process. Keep the timeRelativeID == false always.
+        Model model = modelSetter.add(streamClass, stream.scopeId(), new Storage(stream.name(), false, DownSampling.None), false);
 
         final ManagementPersistentWorker persistentWorker = new ManagementPersistentWorker(moduleDefineHolder, model, managementDAO);
         workers.put(streamClass, persistentWorker);

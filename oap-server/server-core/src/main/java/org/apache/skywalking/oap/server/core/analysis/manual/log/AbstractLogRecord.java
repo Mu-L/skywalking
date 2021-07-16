@@ -29,7 +29,7 @@ import org.apache.skywalking.oap.server.core.UnexpectedException;
 import org.apache.skywalking.oap.server.core.analysis.manual.searchtag.Tag;
 import org.apache.skywalking.oap.server.core.analysis.record.Record;
 import org.apache.skywalking.oap.server.core.query.type.ContentType;
-import org.apache.skywalking.oap.server.core.storage.StorageBuilder;
+import org.apache.skywalking.oap.server.core.storage.StorageHashMapBuilder;
 import org.apache.skywalking.oap.server.core.storage.annotation.Column;
 import org.apache.skywalking.oap.server.library.util.CollectionUtils;
 
@@ -42,9 +42,9 @@ public abstract class AbstractLogRecord extends Record {
     public static final String TRACE_ID = "trace_id";
     public static final String TRACE_SEGMENT_ID = "trace_segment_id";
     public static final String SPAN_ID = "span_id";
-    public static final String IS_ERROR = "is_error";
     public static final String CONTENT_TYPE = "content_type";
     public static final String CONTENT = "content";
+    public static final String CONTENT_TYPE_CLASS = "content_type_class";
     public static final String TAGS_RAW_DATA = "tags_raw_data";
     public static final String TIMESTAMP = "timestamp";
     public static final String TAGS = "tags";
@@ -77,10 +77,6 @@ public abstract class AbstractLogRecord extends Record {
     @Getter
     @Column(columnName = SPAN_ID)
     private int spanId;
-    @Setter
-    @Getter
-    @Column(columnName = IS_ERROR)
-    private int isError;
     @Setter
     @Getter
     @Column(columnName = CONTENT_TYPE, storageOnly = true)
@@ -119,7 +115,7 @@ public abstract class AbstractLogRecord extends Record {
         throw new UnexpectedException("AbstractLogRecord doesn't provide id()");
     }
 
-    public static abstract class Builder<T extends AbstractLogRecord> implements StorageBuilder<T> {
+    public static abstract class Builder<T extends AbstractLogRecord> implements StorageHashMapBuilder<T> {
 
         protected void data2Map(Map<String, Object> map, AbstractLogRecord record) {
             map.put(SERVICE_ID, record.getServiceId());
@@ -129,7 +125,6 @@ public abstract class AbstractLogRecord extends Record {
             map.put(TRACE_ID, record.getTraceId());
             map.put(TRACE_SEGMENT_ID, record.getTraceSegmentId());
             map.put(SPAN_ID, record.getSpanId());
-            map.put(IS_ERROR, record.getIsError());
             map.put(TIME_BUCKET, record.getTimeBucket());
             map.put(CONTENT_TYPE, record.getContentType());
             map.put(CONTENT, record.getContent());
@@ -150,7 +145,6 @@ public abstract class AbstractLogRecord extends Record {
             record.setTraceId((String) dbMap.get(TRACE_ID));
             record.setTraceSegmentId((String) dbMap.get(TRACE_SEGMENT_ID));
             record.setSpanId(((Number) dbMap.get(SPAN_ID)).intValue());
-            record.setIsError(((Number) dbMap.get(IS_ERROR)).intValue());
             record.setContentType(((Number) dbMap.get(CONTENT_TYPE)).intValue());
             record.setContent((String) dbMap.get(CONTENT));
             record.setTimestamp(((Number) dbMap.get(TIMESTAMP)).longValue());
