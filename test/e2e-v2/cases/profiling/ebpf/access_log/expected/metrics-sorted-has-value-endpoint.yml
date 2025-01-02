@@ -13,36 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-version: '3.8'
-
-services:
-  h2db:
-    build:
-      context: .
-      dockerfile: ../../../script/dockerfile/Dockerfile.h2
-    networks:
-      - e2e
-    expose:
-      - 1521
-    healthcheck:
-      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/1521"]
-      interval: 5s
-      timeout: 60s
-      retries: 120
-
-  oap:
-    extends:
-      file: ../../../script/docker-compose/base-compose.yml
-      service: oap
-    environment:
-      SW_STORAGE: h2
-      SW_STORAGE_H2_URL: jdbc:h2:tcp://h2db:1521/skywalking-oap-db;DATABASE_TO_UPPER=FALSE
-    depends_on:
-      h2db:
-        condition: service_healthy
-    ports:
-    - 11800
-    - 12800
-
-networks:
-  e2e:
+debuggingtrace: null
+type: SORTED_LIST
+results:
+  {{- contains .results }}
+  - metric:
+      labels: []
+    values:
+      {{- contains .values }}
+      - id: {{ notEmpty .id }}
+        value: {{ .value }}
+        traceid: null
+        owner:
+          scope: {{ .owner.scope }}
+          serviceid: {{ .owner.serviceid }}
+          servicename: {{ .owner.servicename }}
+          normal: true
+          serviceinstanceid: null
+          serviceinstancename: null
+          endpointid: {{ .owner.endpointid }}
+          endpointname: {{ .owner.endpointname }}
+      {{- end}}
+  {{- end}}
+error: null
