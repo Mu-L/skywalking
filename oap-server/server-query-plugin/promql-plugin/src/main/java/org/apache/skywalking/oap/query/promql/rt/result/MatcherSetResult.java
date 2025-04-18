@@ -27,5 +27,13 @@ import lombok.EqualsAndHashCode;
 @Data
 public class MatcherSetResult extends ParseResult {
     private String metricName;
+    private NameMatcher nameMatcher;
     private Map<String, String> labelMap = new HashMap<>();
+
+    @Data
+    public static class NameMatcher {
+        public final String trafficName;
+        public final String matchString;
+        public final int matchOp;
+    }
 }

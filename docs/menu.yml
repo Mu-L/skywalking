@@ -142,6 +142,10 @@ catalog:
                 path: "/en/setup/backend/backend-rocketmq-monitoring"
               - name: "ActiveMQ"
                 path: "/en/setup/backend/backend-activemq-monitoring"
+          - name: "Data Processing Engine"
+            catalog:
+              - name: "Flink"
+                path: "/en/setup/backend/backend-flink-monitoring"
           - name: "Self Observability"
             catalog:
               - name: "OAP self telemetry"

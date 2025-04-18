@@ -16,18 +16,13 @@
  *
  */
 
-package org.apache.skywalking.oap.server.core.remote.selector;
+package org.apache.skywalking.oap.query.promql.entity.response;
 
-import java.util.List;
-import org.apache.skywalking.oap.server.core.remote.client.RemoteClient;
-import org.apache.skywalking.oap.server.core.remote.data.StreamData;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-public class HashCodeSelector implements RemoteClientSelector {
-
-    @Override
-    public RemoteClient select(List<RemoteClient> clients, StreamData streamData) {
-        int size = clients.size();
-        int selectIndex = Math.abs(streamData.remoteHashCode() % size);
-        return clients.get(selectIndex);
-    }
+@EqualsAndHashCode(callSuper = true)
+@Data
+public class QueryFormatRsp extends QueryResponse {
+    private String data;
 }
